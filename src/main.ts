@@ -21,6 +21,15 @@ interface Player {
   isOnGround: boolean; // player touches the ground ?
 }
 
+// Obstacle interface
+interface Obstacle {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  vx: number; // horizontal speed
+}
+
 // ground position (pixels from canvas top)
 const GROUND_Y = canvas.height * 0.8; // 80% canvas height
 
@@ -38,6 +47,17 @@ const player: Player = {
   vy: 0,
   isOnGround: true,
 };
+
+// Obstacle 
+const obstacles: Obstacle[] = [
+  {
+    x: 50,
+    y: GROUND_Y - 25,
+    width: 40,
+    height: 25,
+    vx: 5,
+  }
+];
 
 // ---- Inputs (keyboard) ----
 
@@ -88,6 +108,38 @@ function updatePlayer() {
   }
 }
 
+// ---- Obstacle update logic ----
+
+function updateObstacles() {
+  // loop over the object array
+  for (const obstacle of obstacles) {
+    // Apply the movement to the left
+    obstacle.x -= obstacle.vx
+    // Check if the obstacle is outside
+    if ((obstacle.x + obstacle.width) < 0) {
+      obstacle.x = canvas.width + 200;
+    }
+  }
+}
+
+// ---- Collision function ----
+
+// Rules AABB (Axis Aligned Bounding Box)
+function checkCollision(player: Player, obstacle: Obstacle): boolean {
+  const isLeft = player.x + player.width < obstacle.x;
+  const isRight = player.x > obstacle.x + obstacle.width;
+  const isAbove = player.y + player.height < obstacle.y;
+  const isBelow = player.y > obstacle.y + obstacle.height;
+
+  // If completly left, right, above or below -> collision = false
+  if (isLeft || isRight || isAbove || isBelow) {
+    return false;
+  }
+
+  // Elseif -> collision = true
+  return true;
+}
+
 // ---- Drawing functions ----
 
 // Clear the screen
@@ -107,15 +159,31 @@ function drawPlayer() {
   ctx.fillRect(player.x, player.y, player.width, player.height);
 }
 
+// Draw the obstacle
+function drawObstacles() {
+  for (const obstacle of obstacles) {
+    ctx.fillStyle = "red";
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+  }
+}
+
 // ---- Game loop ----
 
 function update() {
   updatePlayer();
+  updateObstacles();
+  // Logic collision for every obstacles
+  for (const obstacle of obstacles) {
+    if (checkCollision(player, obstacle)) {
+      console.log("Collision !");
+    }
+  }
 }
 
 function draw() {
   clearCanvas();
   drawGround();
+  drawObstacles();
   drawPlayer();
 }
 
