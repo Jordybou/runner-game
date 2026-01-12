@@ -36,6 +36,12 @@ const GROUND_Y = canvas.height * 0.8; // 80% canvas height
 // Gravity and strength of the jump
 const GRAVITY = 0.5;      // bigger, faster it falls
 const JUMP_STRENGTH = 12; // bigger, stronger the jump
+// Const for speed game
+const OBSTACLE_BASE_SPEED = 5;
+const OBSTACLE_MAX_SPEED = 20;
+const SPEED_PER_POINT = 0.002;
+// Position obstacle aerial
+const AIR_OBSTACLE_OFFSET = 80;
 
 // Player
 const player: Player = {
@@ -51,13 +57,22 @@ const player: Player = {
 // Obstacle 
 const obstacles: Obstacle[] = [
   {
-    x: 50,
+    x: canvas.width + 200,
     y: GROUND_Y - 25,
     width: 40,
     height: 25,
     vx: 5,
   }
 ];
+
+// State game over and game over frames
+type GameState = "WAITING" | "PLAYING" | "GAME_OVER";
+let gameState: GameState = "WAITING";
+let gameOverFrames = 0;
+// State for score
+let score = 0;
+// State spawn count
+let obstacleSpawnCount = 0;
 
 // ---- Inputs (keyboard) ----
 
@@ -115,9 +130,19 @@ function updateObstacles() {
   for (const obstacle of obstacles) {
     // Apply the movement to the left
     obstacle.x -= obstacle.vx
+    // Size
+    obstacle.width = 40;
+    obstacle.height = 25;
     // Check if the obstacle is outside
     if ((obstacle.x + obstacle.width) < 0) {
       obstacle.x = canvas.width + 200;
+      obstacleSpawnCount++;
+      if (obstacleSpawnCount % 2 === 0) {
+        obstacle.y = GROUND_Y - obstacle.height;
+      }
+      else {
+        obstacle.y = GROUND_Y - obstacle.height - AIR_OBSTACLE_OFFSET;
+      }
     }
   }
 }
@@ -170,21 +195,107 @@ function drawObstacles() {
 // ---- Game loop ----
 
 function update() {
+  // GAME OVER = no move, animation and restart
+  if (gameState === "GAME_OVER") {
+    gameOverFrames += 1;
+
+    // Press Space -> restart
+    if (isJumpKeyPressed) {
+      resetGame();
+      gameState = "PLAYING";    // start directly
+      isJumpKeyPressed = false; // avoid double input
+    }
+
+    return;
+  }
+
+  // WAITING = start screen (no move)
+  if (gameState === "WAITING") {
+    if (isJumpKeyPressed) {
+      gameState = "PLAYING";
+      isJumpKeyPressed = false; // avoid double input
+    }
+    return;
+  }
+
+  score += 1;
+  const currentSpeed = Math.min(OBSTACLE_MAX_SPEED, OBSTACLE_BASE_SPEED + score * SPEED_PER_POINT);
   updatePlayer();
   updateObstacles();
-  // Logic collision for every obstacles
+
   for (const obstacle of obstacles) {
+    obstacle.vx = currentSpeed;
     if (checkCollision(player, obstacle)) {
-      console.log("Collision !");
+      gameState = "GAME_OVER";
+      gameOverFrames = 0;
+      break;
     }
   }
 }
 
+// Reset after Game Over
+function resetGame() {
+  gameOverFrames = 0;
+  score = 0;
+
+  player.y = GROUND_Y - player.height;
+  player.vy = 0;
+  player.isOnGround = true;
+
+  for (const obstacle of obstacles) {
+    obstacle.x = canvas.width + 200;
+  }
+
+  isJumpKeyPressed = false;
+}
+
+// Displays the current game state, never modifies game data
 function draw() {
+  // Margin for score
+  const margin = 20;
+  // X and Y for center canvas
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
   clearCanvas();
   drawGround();
   drawObstacles();
   drawPlayer();
+
+  // Displaying Score
+  ctx.save();
+  ctx.font = "20px sans-serif";
+  ctx.textBaseline = "top";
+  ctx.textAlign = "right";
+  ctx.fillStyle = "black";
+  ctx.fillText("Score: " + score, canvas.width - margin, margin);
+  ctx.restore();
+
+  // Displaying the text with blinking effect
+  if (gameState === "GAME_OVER") {
+    const blinkPeriod = 30;
+    const blinkOn = (Math.floor(gameOverFrames / blinkPeriod) % 2) === 0;
+    if (blinkOn) {
+      // Save the graphical state of the context (style, alignment, etc)
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "48px sans-serif";
+      // Spacing line
+      const lineSpacing = 50;
+      ctx.fillText("GAME OVER", centerX, centerY);
+      ctx.fillText("Press Space to restart", centerX, centerY + lineSpacing);
+      // Restores a previous state
+      ctx.restore();
+    }
+  }
+  else if (gameState === "WAITING") {
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "48px sans-serif";
+    ctx.fillText("Press Space to start", centerX, centerY);
+    ctx.restore();
+  }
 }
 
 // Game loop : calls update + draw on each fram
@@ -193,6 +304,5 @@ function gameLoop() {
   draw();
   requestAnimationFrame(gameLoop);
 }
-
 // Start loop
 gameLoop();
