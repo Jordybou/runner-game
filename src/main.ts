@@ -36,12 +36,39 @@ const GROUND_Y = canvas.height * 0.8; // 80% canvas height
 // Gravity and strength of the jump
 const GRAVITY = 0.5;      // bigger, faster it falls
 const JUMP_STRENGTH = 12; // bigger, stronger the jump
+
 // Const for speed game
 const OBSTACLE_BASE_SPEED = 5;
 const OBSTACLE_MAX_SPEED = 20;
 const SPEED_PER_POINT = 0.002;
+
 // Position obstacle aerial
 const AIR_OBSTACLE_OFFSET = 80;
+
+// Character image (picture 1 and 2)
+const playerWalkImg1 = new Image();
+const playerWalkImg2 = new Image();
+const playerJumpImg = new Image();
+
+playerWalkImg1.src = "/image/player_walk1.png";
+playerWalkImg2.src = "/image/player_walk2.png";
+playerJumpImg.src = "/image/player_jump.png";
+
+let playerImgReady = false;
+let loadedCount = 0;
+
+function onPlayerImgLoaded() {
+  loadedCount++;
+  if (loadedCount === 3) {
+    playerImgReady = true;
+  }
+}
+playerWalkImg1.onload = onPlayerImgLoaded;
+playerWalkImg2.onload = onPlayerImgLoaded;
+playerJumpImg.onload = onPlayerImgLoaded;
+
+let playerFrameIndex = 0;
+let playerAnimeFrames = 0;
 
 // Player
 const player: Player = {
@@ -180,8 +207,18 @@ function drawGround() {
 
 // Draw the player (rectangle to start)
 function drawPlayer() {
-  ctx.fillStyle = "black";
-  ctx.fillRect(player.x, player.y, player.width, player.height);
+  if (!playerImgReady) {
+    ctx.fillStyle = "black";
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+    return;
+  }
+  if (!player.isOnGround) {
+    ctx.drawImage(playerJumpImg, player.x, player.y, player.width, player.height)
+    return;
+  }
+
+  const imgToDraw = playerFrameIndex === 0 ? playerWalkImg1 : playerWalkImg2;
+  ctx.drawImage(imgToDraw, player.x, player.y, player.width, player.height);
 }
 
 // Draw the obstacle
@@ -222,6 +259,14 @@ function update() {
   const currentSpeed = Math.min(OBSTACLE_MAX_SPEED, OBSTACLE_BASE_SPEED + score * SPEED_PER_POINT);
   updatePlayer();
   updateObstacles();
+
+  if (player.isOnGround) {
+    playerAnimeFrames++;
+    if (playerAnimeFrames % 10 === 0) {
+      playerFrameIndex = playerFrameIndex === 0 ? 1 : 0;
+    }
+  }
+
 
   for (const obstacle of obstacles) {
     obstacle.vx = currentSpeed;
