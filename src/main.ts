@@ -45,27 +45,22 @@ const SPEED_PER_POINT = 0.002;
 // Position obstacle aerial
 const AIR_OBSTACLE_OFFSET = 80;
 
-// Character image (picture 1 and 2)
-const playerWalkImg1 = new Image();
-const playerWalkImg2 = new Image();
-const playerJumpImg = new Image();
+// Sprite sheet
+const PLAYER_FRAME_WIDTH = 80;
+const PLAYER_FRAME_HEIGHT = 110;
+const RUN_FRAMES = 2
+const JUMP_FRAME_INDEX = 2;
+const RUN_ROW = 1;
+const JUMP_ROW = 2;
 
-playerWalkImg1.src = "/image/player_walk1.png";
-playerWalkImg2.src = "/image/player_walk2.png";
-playerJumpImg.src = "/image/player_jump.png";
+// Character image (Sprite sheet)
+const playerSheet = new Image();
+
+playerSheet.src = "/image/player_tilesheet.png";
 
 let playerImgReady = false;
-let loadedCount = 0;
 
-function onPlayerImgLoaded() {
-  loadedCount++;
-  if (loadedCount === 3) {
-    playerImgReady = true;
-  }
-}
-playerWalkImg1.onload = onPlayerImgLoaded;
-playerWalkImg2.onload = onPlayerImgLoaded;
-playerJumpImg.onload = onPlayerImgLoaded;
+playerSheet.onload = () => { playerImgReady = true; };
 
 let playerFrameIndex = 0;
 let playerAnimeFrames = 0;
@@ -207,18 +202,43 @@ function drawGround() {
 
 // Draw the player (rectangle to start)
 function drawPlayer() {
+  const sxRun = playerFrameIndex * PLAYER_FRAME_WIDTH;
+  const sxJump = JUMP_FRAME_INDEX * PLAYER_FRAME_WIDTH;
+  const syRun = RUN_ROW * PLAYER_FRAME_HEIGHT;
+  const syJump = JUMP_ROW * PLAYER_FRAME_HEIGHT;
+
   if (!playerImgReady) {
     ctx.fillStyle = "black";
     ctx.fillRect(player.x, player.y, player.width, player.height);
     return;
   }
+
   if (!player.isOnGround) {
-    ctx.drawImage(playerJumpImg, player.x, player.y, player.width, player.height)
+    ctx.drawImage(
+      playerSheet,
+      sxJump,
+      syJump,
+      PLAYER_FRAME_WIDTH,
+      PLAYER_FRAME_HEIGHT,
+      player.x,
+      player.y,
+      player.width,
+      player.height
+    )
     return;
   }
 
-  const imgToDraw = playerFrameIndex === 0 ? playerWalkImg1 : playerWalkImg2;
-  ctx.drawImage(imgToDraw, player.x, player.y, player.width, player.height);
+  ctx.drawImage(
+    playerSheet,
+    sxRun,
+    syRun,
+    PLAYER_FRAME_WIDTH,
+    PLAYER_FRAME_HEIGHT,
+    player.x,
+    player.y,
+    player.width,
+    player.height
+  );
 }
 
 // Draw the obstacle
@@ -260,13 +280,18 @@ function update() {
   updatePlayer();
   updateObstacles();
 
+  // % 10 = fluid for 60 FPS
+  playerAnimeFrames++;
+  if (playerAnimeFrames % 10 === 0) {
+    playerFrameIndex = (playerFrameIndex + 1) % RUN_FRAMES;
+  }
+
   if (player.isOnGround) {
     playerAnimeFrames++;
     if (playerAnimeFrames % 10 === 0) {
       playerFrameIndex = playerFrameIndex === 0 ? 1 : 0;
     }
   }
-
 
   for (const obstacle of obstacles) {
     obstacle.vx = currentSpeed;
