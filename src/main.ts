@@ -28,6 +28,7 @@ interface Obstacle {
   width: number;
   height: number;
   vx: number; // horizontal speed
+  type: "GROUND" | "AIR";
 }
 
 // ground position (pixels from canvas top)
@@ -55,12 +56,16 @@ const JUMP_ROW = 2;
 
 // Character image (Sprite sheet)
 const playerSheet = new Image();
+const obstacleSheet = new Image();
 
 playerSheet.src = "/image/player_tilesheet.png";
+obstacleSheet.src = "/image/bush.png";
 
 let playerImgReady = false;
+let obstacleImgReady = false;
 
 playerSheet.onload = () => { playerImgReady = true; };
+obstacleSheet.onload = () => { obstacleImgReady = true; };
 
 let playerFrameIndex = 0;
 let playerAnimeFrames = 0;
@@ -84,6 +89,7 @@ const obstacles: Obstacle[] = [
     width: 40,
     height: 25,
     vx: 5,
+    type: "GROUND",
   }
 ];
 
@@ -160,9 +166,11 @@ function updateObstacles() {
       obstacle.x = canvas.width + 200;
       obstacleSpawnCount++;
       if (obstacleSpawnCount % 2 === 0) {
+        obstacle.type = "GROUND";
         obstacle.y = GROUND_Y - obstacle.height;
       }
       else {
+        obstacle.type = "AIR";
         obstacle.y = GROUND_Y - obstacle.height - AIR_OBSTACLE_OFFSET;
       }
     }
@@ -244,8 +252,13 @@ function drawPlayer() {
 // Draw the obstacle
 function drawObstacles() {
   for (const obstacle of obstacles) {
-    ctx.fillStyle = "red";
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    if (!obstacleImgReady) {
+      ctx.fillStyle = "red";
+      ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    }
+    else {
+      ctx.drawImage(obstacleSheet, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    }
   }
 }
 
